@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.21.0
+FROM golang:1.21.0 as build
 
 # Set destination for COPY
 WORKDIR /app
@@ -14,7 +14,17 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
+RUN CGO_ENABLED=0 GOOS=linux go build -o docker-gs-ping
+
+
+# Use a Docker multi-stage build to create a lean production image.
+
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy the binary to the production image from the builder stage.
+COPY --from=build /app/docker-gs-ping .
 
 # Optional:
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
@@ -24,4 +34,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
 EXPOSE 8080
 
 # Run
-CMD ["/docker-gs-ping"]
+CMD ["./docker-gs-ping"]
